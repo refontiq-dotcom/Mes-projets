@@ -44,12 +44,28 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   return NextResponse.json(result);
 }
 
-/** État de la configuration (sans déclencher d'envoi). */
-export async function GET(): Promise<NextResponse> {
+/**
+ * Déclenchement via Vercel Cron (requêtes GET uniquement).
+ * Le cron envoie l'en-tête `Authorization: Bearer <CRON_SECRET>`.
+ * Sans secret valide, renvoie l'état de configuration (comportement d'origine).
+ */
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  const secret = process.env.TROUVETOU_SYNC_SECRET;
+
   const configured = Boolean(
     process.env.TROUVETOU_SYNC_URL &&
       process.env.TROUVETOU_API_KEY &&
       process.env.TROUVETOU_SYNC_SECRET
   );
-  return NextResponse.json({ ok: true, configured });
+
+  const provided = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim() ?? null;
+  if (!secret || provided !== secret) {
+    return NextResponse.json({ ok: true, configured });
+  }
+
+  const result = await syncListingsToTrouvetou();
+  if (!result.ok) {
+    return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
+  }
+  return NextResponse.json(result);
 }
