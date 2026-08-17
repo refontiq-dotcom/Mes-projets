@@ -89,12 +89,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!listing_id) {
     return jsonError("listing_id est requis.", 400, "MISSING_LISTING");
   }
-  if (!check_in_date || !check_out_date) {
-    return jsonError("check_in_date et check_out_date sont requis.", 400, "MISSING_DATES");
-  }
-  if (check_in_date >= check_out_date) {
-    return jsonError("check_out_date doit être postérieur à check_in_date.", 400, "INVALID_DATES");
-  }
 
   // 1. Lire l'annonce en base (service_role) pour récupérer la clé API Séjour@
   const { data: listing, error: listingError } = await admin
@@ -134,6 +128,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // ── Action "check" : disponibilité temps réel + estimation du prix ────────
   if (action === "check") {
+    if (!check_in_date || !check_out_date) {
+      return jsonError("check_in_date et check_out_date sont requis.", 400, "MISSING_DATES");
+    }
+    if (check_in_date >= check_out_date) {
+      return jsonError("check_out_date doit être postérieur à check_in_date.", 400, "INVALID_DATES");
+    }
+
     const nights = Math.max(
       1,
       Math.round(
@@ -228,6 +229,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // ── Action "create" : création de la réservation Séjour@ ──────────────────
   const { guest, special_requests } = body;
+  if (!check_in_date || !check_out_date) {
+    return jsonError("check_in_date et check_out_date sont requis.", 400, "MISSING_DATES");
+  }
+  if (check_in_date >= check_out_date) {
+    return jsonError("check_out_date doit être postérieur à check_in_date.", 400, "INVALID_DATES");
+  }
   if (!guest?.full_name || typeof guest.full_name !== "string" || !guest.full_name.trim()) {
     return jsonError("guest.full_name est requis.", 400, "MISSING_GUEST_NAME");
   }
