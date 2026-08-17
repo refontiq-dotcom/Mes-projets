@@ -11,8 +11,32 @@ import { LISTINGS_SELECT } from "@/lib/supabase/listings";
  * lecture pour ce rôle : toutes les annonces étaient donc filtrées. Passer par
  * le service_role (qui contourne RLS) restaure le catalogue complet.
  *
+ * Sécurité : les champs secrets stockés dans `attributes` (ex : la clé API
+ * Séjour@ `sejoura_api_key`) ne doivent JAMAIS sortir de cette route. Ils sont
+ * utilisés uniquement côté serveur (création de réservation via
+ * POST /api/catalog/bookings).
+ *
  *   GET /api/catalog/listings?q=&categories=hotel,residence&maxPrice=&limit=
  */
+
+// Champs secrets à masquer des attributs publics d'une annonce.
+const SECRET_ATTRIBUTE_KEYS = new Set(["sejoura_api_key"]);
+
+/** Retire les champs secrets des attributs avant exposition publique. */
+function sanitizeAttributes(attributes: unknown): unknown {
+  if (!attributes || typeof attributes !== "object" || Array.isArray(attributes)) {
+    return attributes;
+  }
+  const clean: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(attributes)) {
+    if (!SECRET_ATTRIBUTE_KEYS.has(key)) clean[key] = value;
+  }
+  return clean;
+}
+
+function sanitizeRow(row: Record<string, unknown>): Record<string, unknown> {
+  return { ...row, attributes: sanitizeAttributes(row.attributes) };
+}
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -67,5 +91,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ data: [], error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ data: data ?? [], error: null });
+  const sanitized = (data ?? []).map((row) =>
+    sanitizeRow(row as unknown as Record<string, unknown>)
+  );
+
+  return NextResponse.json({ data: sanitized, error: null });
 }
