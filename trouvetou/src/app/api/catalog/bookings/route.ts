@@ -9,16 +9,20 @@ import { getAdminClient } from "@/lib/supabase/admin";
  * de Séjour@, authentifiée par la clé API de l'établissement stockée dans
  * `listings.attributes.sejoura_api_key` (masquée des réponses publiques).
  *
- * Deux actions :
+ * Trois actions :
  *   action = "check"   → vérifie la disponibilité temps réel et calcule le prix
  *                        (GET /api/v1/external/availability côté Séjour@).
  *   action = "create"  → crée la réservation côté Séjour@
  *                        (POST /api/v1/external/bookings). Le statut est
  *                        `confirmed` dès la création (anti double-book).
+ *   action = "cancel"  → annule une réservation côté Séjour@
+ *                        (POST /api/v1/external/bookings/cancel).
  *
  *   POST /api/catalog/bookings
- *   { "action": "check"|"create",
+ *   { "action": "check"|"create"|"cancel",
  *     "listing_id": "<uuid listing trouvetou>",
+ *     "booking_id": "<uuid réservation séjour@>",   // requis pour cancel
+ *     "reason": "..." | null,                        // optionnel pour cancel
  *     "check_in_date": "YYYY-MM-DD",
  *     "check_out_date": "YYYY-MM-DD",
  *     "number_of_guests": 2,
@@ -34,6 +38,8 @@ const SEJOURA_API_URL =
 interface BookingRequestBody {
   action?: string;
   listing_id?: string;
+  booking_id?: string;
+  reason?: string | null;
   check_in_date?: string;
   check_out_date?: string;
   number_of_guests?: number;
@@ -76,7 +82,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return jsonError("Le corps de la requête doit être un JSON valide.", 400, "INVALID_JSON");
   }
 
-  const action = body.action === "create" ? "create" : "check";
+  const action =
+    body.action === "create" ? "create" : body.action === "cancel" ? "cancel" : "check";
   const { listing_id, check_in_date, check_out_date, number_of_guests } = body;
 
   if (!listing_id) {
@@ -164,6 +171,58 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       available_rooms: data.available_rooms ?? 0,
       nights,
       room_type_id: roomTypeId,
+    });
+  }
+
+  // ── Action "cancel" : annulation d'une réservation Séjour@ ─────────────────
+  if (action === "cancel") {
+    const { booking_id, reason } = body;
+    if (!booking_id || typeof booking_id !== "string") {
+      return jsonError("booking_id est requis pour annuler.", 400, "MISSING_BOOKING_ID");
+    }
+
+    const cancelRes = await fetch(
+      `${SEJOURA_API_URL}/api/v1/external/bookings/cancel`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          booking_id,
+          reason: reason ? String(reason) : null,
+        }),
+      }
+    );
+
+    const cancelData = (await cancelRes.json().catch(() => ({}))) as {
+      success?: boolean;
+      error?: string;
+      booking?: {
+        booking_code?: string;
+        status?: string;
+      };
+    };
+
+    if (!cancelRes.ok) {
+      const status = cancelRes.status;
+      if (status === 404) {
+        return NextResponse.json(
+          { success: false, code: "BOOKING_NOT_FOUND", error: cancelData.error ?? "Réservation introuvable." },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json(
+        {
+          success: false,
+          code: status === 401 || status === 403 ? "BOOKING_ACTION_FORBIDDEN" : "CANCEL_FAILED",
+          error: cancelData.error ?? `Erreur d'annulation (HTTP ${status})`,
+        },
+        { status: status === 401 || status === 403 ? 409 : 502 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      booking: cancelData.booking ?? null,
     });
   }
 
