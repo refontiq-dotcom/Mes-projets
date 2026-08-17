@@ -151,8 +151,10 @@ CREATE TRIGGER trigger_listings_updated BEFORE UPDATE ON listings
 -- ----------------------------------------------------------------------------
 -- 7. ROW LEVEL SECURITY (RLS)
 --
---   anon         : LECTURE SEULE du catalogue public (listings, categories).
---   providers    : inaccessible à anon (réservé au service_role).
+--   anon         : LECTURE SEULE du catalogue public (listings, categories,
+--                  et le strict nécessaire de providers pour le JOIN !inner).
+--   providers    : lecture publique limitée (identité du fournisseur) — la
+--                  politique EXISTS évite de laisser passer le désactivé.
 --   listings     : lecture publique, aucune mutation côté client.
 --   L'ingestion passe par la clé service (service_role) qui contourne RLS.
 -- ----------------------------------------------------------------------------
@@ -165,7 +167,16 @@ ALTER TABLE sync_logs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "categories_select_public" ON categories
   FOR SELECT USING (TRUE);
 
--- providers : aucune politique → inaccessible au rôle anon
+-- providers : lecture publique restreinte à la partie identité, masquage
+--   des colonnes sensibles (api_key_hash, webhook_url) via privilèges de colonne.
+--   Sans cela, le JOIN `providers!inner` du catalogue ne renvoie rien au rôle
+--   anon et toutes les annonces disparaissent du portail.
+REVOKE ALL ON providers FROM anon, authenticated;
+GRANT SELECT (id, name, category_id, is_active, created_at, updated_at)
+  ON providers TO anon, authenticated;
+CREATE POLICY "providers_select_public" ON providers
+  FOR SELECT USING (is_active = TRUE);
+
 -- listings : catalogue public en lecture seule
 CREATE POLICY "listings_select_public" ON listings
   FOR SELECT USING (is_available = TRUE);

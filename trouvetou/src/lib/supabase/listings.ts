@@ -1,4 +1,3 @@
-import { getSupabase } from "./client";
 import type { Listing } from "./database.types";
 
 // ============================================================================
@@ -7,9 +6,14 @@ import type { Listing } from "./database.types";
 // Le portail consomme désormais la table polymorphe `listings` de sa propre
 // base, agrégée par la couche d'ingestion /api/v1/sync (voir `categories`,
 // `providers`, `listings` dans supabase/schema.sql).
+//
+// Les lectures passent par les routes serveur /api/catalog/* (client admin,
+// service_role) car le rôle `anon` ne peut pas lire `providers` (pas de
+// politique RLS) : le JOIN `providers!inner` du portail filtrerait alors
+// toutes les annonces.
 // ============================================================================
 
-const LISTINGS_SELECT = `
+export const LISTINGS_SELECT = `
   id,
   provider_id,
   category_id,
@@ -108,64 +112,61 @@ function mapRows(data: unknown): ListedListing[] {
 }
 
 /**
- * Récupère les annonces publiques du comparateur depuis la base Trouvetou.
- * Les catégories, le budget et la recherche sont filtrés côté serveur ;
- * le tri est appliqué côté client après normalisation.
+ * Récupère les annonces publiques du comparateur.
+ * La lecture passe par la route serveur /api/catalog/listings (client admin,
+ * service_role) : la lecture directe en base via le rôle `anon` échoue sur le
+ * JOIN `providers!inner` car `providers` n'a pas de politique RLS de lecture
+ * pour ce rôle. Les filtres (catégories, budget, recherche) sont appliqués
+ * côté serveur ; le tri est appliqué ici après normalisation.
  */
 export async function fetchListings(
   params: FetchListingsParams = {}
 ): Promise<{ data: ListedListing[]; error: Error | null }> {
-  const supabase = getSupabase();
-  if (!supabase) {
+  const { search, categorySlugs, maxPrice, sort, limit } = params;
+
+  const base =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_SITE_URL ?? "https://trouvetou.vercel.app";
+
+  const url = new URL("/api/catalog/listings", base);
+  if (search && search.trim().length > 0) {
+    url.searchParams.set("q", search.trim());
+  }
+  if (categorySlugs && categorySlugs.length > 0) {
+    url.searchParams.set("categories", categorySlugs.join(","));
+  }
+  if (maxPrice && maxPrice > 0) {
+    url.searchParams.set("maxPrice", String(maxPrice));
+  }
+  if (limit && limit > 0) {
+    url.searchParams.set("limit", String(limit));
+  }
+
+  let rows: ListingRow[];
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    const body = (await res.json()) as { data?: ListingRow[]; error?: string | null };
+    if (!res.ok || body.error) {
+      return {
+        data: [],
+        error: new Error(body.error ?? `Erreur HTTP ${res.status}`),
+      };
+    }
+    rows = body.data ?? [];
+  } catch (err) {
     return {
       data: [],
-      error: new Error(
-        "Supabase n'est pas configuré. Renseignez NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY (voir .env.example)."
-      ),
+      error: err instanceof Error ? err : new Error("Erreur réseau"),
     };
   }
 
-  let query = supabase
-    .from("listings")
-    .select(LISTINGS_SELECT)
-    .eq("is_available", true);
+  const listings = mapRows(rows);
 
-  const { search, categorySlugs, maxPrice, limit } = params;
-
-  if (search && search.trim().length > 0) {
-    // Recherche sur le titre, la ville et le nom du provider.
-    // Les caractères `%` et `,` sont neutralisés (syntaxe PostgREST .or()).
-    const needle = search.trim().replace(/[%,]/g, " ");
-    query = query.or(
-      `title.ilike.%${needle}%,city.ilike.%${needle}%,providers.name.ilike.%${needle}%`
-    );
-  }
-
-  if (categorySlugs && categorySlugs.length > 0) {
-    query = query.in("categories.slug", categorySlugs);
-  }
-
-  if (maxPrice && maxPrice > 0) {
-    query = query.lte("base_price", maxPrice);
-  }
-
-  let dataQuery = query.order("updated_at", { ascending: false });
-  if (limit && limit > 0) {
-    dataQuery = dataQuery.limit(limit);
-  }
-
-  const { data, error } = await dataQuery;
-
-  if (error) {
-    return { data: [], error: new Error(error.message) };
-  }
-
-  const listings = mapRows(data);
-
-  const sort = params.sort ?? "updated";
+  const sortKey = sort ?? "updated";
   listings.sort((a, b) => {
-    if (sort === "price_asc") return (a.base_price ?? 0) - (b.base_price ?? 0);
-    if (sort === "price_desc") return (b.base_price ?? 0) - (a.base_price ?? 0);
+    if (sortKey === "price_asc") return (a.base_price ?? 0) - (b.base_price ?? 0);
+    if (sortKey === "price_desc") return (b.base_price ?? 0) - (a.base_price ?? 0);
     return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
   });
 
@@ -177,19 +178,25 @@ export async function fetchCategories(): Promise<{
   data: Array<{ slug: string; name: string }>;
   error: Error | null;
 }> {
-  const supabase = getSupabase();
-  if (!supabase) {
-    return { data: [], error: null };
+  const base =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_SITE_URL ?? "https://trouvetou.vercel.app";
+
+  try {
+    const res = await fetch(`${base}/api/catalog/categories`, { cache: "no-store" });
+    const body = (await res.json()) as { data?: Array<{ slug: string; name: string }>; error?: string | null };
+    if (!res.ok || body.error) {
+      return {
+        data: [],
+        error: new Error(body.error ?? `Erreur HTTP ${res.status}`),
+      };
+    }
+    return { data: body.data ?? [], error: null };
+  } catch (err) {
+    return {
+      data: [],
+      error: err instanceof Error ? err : new Error("Erreur réseau"),
+    };
   }
-
-  const { data, error } = await supabase
-    .from("categories")
-    .select("slug, name")
-    .order("name", { ascending: true });
-
-  if (error) {
-    return { data: [], error: new Error(error.message) };
-  }
-
-  return { data: (data ?? []) as Array<{ slug: string; name: string }>, error: null };
 }
