@@ -20,19 +20,22 @@ import {
   formatFCFA,
   getAmenitiesInfo,
   getCategoryLabel,
+  PLACEHOLDER_IMAGE,
 } from "@/lib/utils";
 import type { ListingView } from "@/lib/supabase/listing-view";
 
 interface RoomCardProps {
   room: ListingView;
   index?: number;
+  /** Libellé du prix affiché sous le montant (défaut : "par nuit"). */
+  priceSuffix?: string;
 }
 
-export function RoomCard({ room, index = 0 }: RoomCardProps) {
+export function RoomCard({ room, index = 0, priceSuffix = "par nuit" }: RoomCardProps) {
   const [bookingOpen, setBookingOpen] = useState(false);
 
   const establishment = room.establishment;
-  const coverImage = room.images[0];
+  const coverImage = room.images[0] ?? PLACEHOLDER_IMAGE;
   const amenities = getAmenitiesInfo(room.amenities ?? []).slice(0, 4);
   const mapsUrl = buildGoogleMapsUrl(
     establishment?.latitude,
@@ -127,7 +130,7 @@ export function RoomCard({ room, index = 0 }: RoomCardProps) {
               <p className="text-lg font-bold text-foreground">
                 {formatFCFA(room.price ?? 0)}
               </p>
-              <p className="text-xs text-muted-foreground">par nuit</p>
+              <p className="text-xs text-muted-foreground">{priceSuffix}</p>
             </div>
           </div>
 
@@ -157,6 +160,7 @@ export function RoomCard({ room, index = 0 }: RoomCardProps) {
         room={room}
         open={bookingOpen}
         onClose={() => setBookingOpen(false)}
+        priceSuffix={priceSuffix}
       />
     </>
   );

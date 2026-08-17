@@ -44,6 +44,8 @@ export interface FetchListingsParams {
   maxPrice?: number;
   sort?: "price_asc" | "price_desc" | "updated";
   limit?: number;
+  /** Ne retourne que les annonces `is_boosted = true` (filtre SQL). */
+  boosted?: boolean;
 }
 
 export interface ListedListing extends Listing {
@@ -122,7 +124,7 @@ function mapRows(data: unknown): ListedListing[] {
 export async function fetchListings(
   params: FetchListingsParams = {}
 ): Promise<{ data: ListedListing[]; error: Error | null }> {
-  const { search, categorySlugs, maxPrice, sort, limit } = params;
+  const { search, categorySlugs, maxPrice, sort, limit, boosted } = params;
 
   const base =
     typeof window !== "undefined"
@@ -141,6 +143,9 @@ export async function fetchListings(
   }
   if (limit && limit > 0) {
     url.searchParams.set("limit", String(limit));
+  }
+  if (boosted) {
+    url.searchParams.set("boosted", "1");
   }
 
   let rows: ListingRow[];

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -12,7 +12,7 @@ import { getAdminClient } from "@/lib/supabase/admin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: NextRequest): Promise<NextResponse> {
+export async function GET(): Promise<NextResponse> {
   const admin = getAdminClient();
   if (!admin) {
     return NextResponse.json(

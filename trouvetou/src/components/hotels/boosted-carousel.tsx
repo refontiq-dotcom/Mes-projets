@@ -11,17 +11,27 @@ import "swiper/css/pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BookingModal } from "@/components/hotels/booking-modal";
-import { formatFCFA } from "@/lib/utils";
+import { formatFCFA, PLACEHOLDER_IMAGE } from "@/lib/utils";
 import type { ListingView } from "@/lib/supabase/listing-view";
 
 interface BoostedCarouselProps {
   rooms: ListingView[];
+  /** Libellé du prix (défaut : "/ nuit"). */
+  priceSuffix?: string;
 }
 
-function BoostedCard({ room }: { room: ListingView }) {
+function BoostedCard({
+  room,
+  index,
+  priceSuffix = "/ nuit",
+}: {
+  room: ListingView;
+  index: number;
+  priceSuffix?: string;
+}) {
   const [bookingOpen, setBookingOpen] = useState(false);
   const establishment = room.establishment;
-  const image = room.images[0];
+  const image = room.images[0] ?? PLACEHOLDER_IMAGE;
 
   return (
     <>
@@ -37,7 +47,8 @@ function BoostedCard({ room }: { room: ListingView }) {
           fill
           sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
           className="object-cover transition-transform duration-500 group-hover:scale-105"
-          priority
+          priority={index === 0}
+          loading={index === 0 ? "eager" : "lazy"}
         />
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/10" />
@@ -63,7 +74,9 @@ function BoostedCard({ room }: { room: ListingView }) {
           <div className="mt-3 flex items-end justify-between gap-3">
             <p className="text-2xl font-bold drop-shadow">
               {formatFCFA(room.price ?? 0)}
-              <span className="ml-1 text-sm font-normal text-white/80">/ nuit</span>
+              <span className="ml-1 text-sm font-normal text-white/80">
+                {priceSuffix}
+              </span>
             </p>
 
             <Button
@@ -82,12 +95,13 @@ function BoostedCard({ room }: { room: ListingView }) {
         room={room}
         open={bookingOpen}
         onClose={() => setBookingOpen(false)}
+        priceSuffix={priceSuffix}
       />
     </>
   );
 }
 
-export function BoostedCarousel({ rooms }: BoostedCarouselProps) {
+export function BoostedCarousel({ rooms, priceSuffix }: BoostedCarouselProps) {
   if (rooms.length === 0) return null;
 
   return (
@@ -117,9 +131,9 @@ export function BoostedCarousel({ rooms }: BoostedCarouselProps) {
         }}
         className="!pb-10 [&_.swiper-pagination-bullet]:bg-amber-400"
       >
-        {rooms.map((room) => (
+        {rooms.map((room, i) => (
           <SwiperSlide key={room.id}>
-            <BoostedCard room={room} />
+            <BoostedCard room={room} index={i} priceSuffix={priceSuffix} />
           </SwiperSlide>
         ))}
       </Swiper>

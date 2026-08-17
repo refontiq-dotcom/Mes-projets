@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,9 @@ const sizeClasses = {
   xl: "max-w-4xl",
 };
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+
 export function Modal({
   open,
   onClose,
@@ -29,6 +32,10 @@ export function Modal({
   children,
   size = "md",
 }: ModalProps) {
+  const titleId = useId();
+  const descriptionId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
@@ -41,11 +48,53 @@ export function Modal({
   }, [open]);
 
   useEffect(() => {
-    function handleEscape(e: KeyboardEvent) {
-      if (e.key === "Escape" && open) onClose();
+    if (!open) return;
+
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const frame = requestAnimationFrame(() => dialogRef.current?.focus());
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (e.key !== "Tab") return;
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+
+      const focusables = Array.from(
+        dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      );
+      if (focusables.length === 0) {
+        e.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+
+      if (e.shiftKey && (active === first || !dialog.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (active === last || !dialog.contains(active))) {
+        e.preventDefault();
+        first.focus();
+      }
     }
-    window.addEventListener("keydown", handleEscape);
-    return () => window.removeEventListener("keydown", handleEscape);
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("keydown", handleKeyDown);
+      if (previouslyFocused?.isConnected) {
+        previouslyFocused.focus();
+      }
+    };
   }, [open, onClose]);
 
   return (
@@ -67,10 +116,14 @@ export function Modal({
           />
 
           <motion.div
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
+            aria-labelledby={title ? titleId : undefined}
+            aria-describedby={description ? descriptionId : undefined}
+            tabIndex={-1}
             className={cn(
-              "relative w-full bg-card rounded-2xl shadow-2xl max-h-[90vh] flex flex-col",
+              "relative w-full bg-card rounded-2xl shadow-2xl max-h-[90vh] flex flex-col outline-none",
               sizeClasses[size]
             )}
             initial={{ opacity: 0, scale: 0.95, y: 16 }}
@@ -82,12 +135,12 @@ export function Modal({
               <div className="p-6 border-b border-border flex items-start justify-between shrink-0">
                 <div>
                   {title && (
-                    <h2 className="text-xl font-semibold text-foreground">
+                    <h2 id={titleId} className="text-xl font-semibold text-foreground">
                       {title}
                     </h2>
                   )}
                   {description && (
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p id={descriptionId} className="text-sm text-muted-foreground mt-1">
                       {description}
                     </p>
                   )}

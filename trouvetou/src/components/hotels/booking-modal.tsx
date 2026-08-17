@@ -10,7 +10,6 @@ import {
   Users,
   XCircle,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
@@ -21,6 +20,8 @@ interface BookingModalProps {
   room: ListingView;
   open: boolean;
   onClose: () => void;
+  /** Libellé du prix (défaut : "/ nuit"). */
+  priceSuffix?: string;
 }
 
 type CheckResult = {
@@ -40,7 +41,12 @@ type BookingResult = {
 
 type Step = "dates" | "guest" | "success";
 
-export function BookingModal({ room, open, onClose }: BookingModalProps) {
+export function BookingModal({
+  room,
+  open,
+  onClose,
+  priceSuffix = "/ nuit",
+}: BookingModalProps) {
   const establishment = room.establishment;
   const maxGuests = room.capacity && room.capacity > 0 ? room.capacity : 10;
 
@@ -177,7 +183,9 @@ export function BookingModal({ room, open, onClose }: BookingModalProps) {
     }
   };
 
-  const whatsappMessage = `Bonjour, je vous contacte depuis Trouvetou à propos de « ${room.name} ».`;
+  const whatsappMessage = `Bonjour, je vous contacte depuis Trouvetou. Je suis intéressé(e) par « ${room.name} » à ${formatFCFA(
+    room.price ?? 0
+  )} ${priceSuffix}.`;
 
   return (
     <Modal
@@ -210,7 +218,7 @@ export function BookingModal({ room, open, onClose }: BookingModalProps) {
           <p className="text-sm font-bold text-primary">
             {formatFCFA(room.price ?? 0)}
             <span className="ml-1 text-xs font-normal text-muted-foreground">
-              / nuit
+              {priceSuffix}
             </span>
           </p>
         </div>

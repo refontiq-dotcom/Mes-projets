@@ -17,6 +17,8 @@ export interface FetchListedListingsParams {
   categorySlugs?: string[];
   maxPrice?: number;
   limit?: number;
+  /** Ne retourne que les annonces `is_boosted = true` (filtre SQL). */
+  boosted?: boolean;
 }
 
 /**
@@ -26,7 +28,7 @@ export interface FetchListedListingsParams {
 export async function fetchListedListings(
   params: FetchListedListingsParams = {}
 ): Promise<{ data: ListingView[]; error: Error | null }> {
-  const { search, categorySlugs, maxPrice, limit } = params;
+  const { search, categorySlugs, maxPrice, limit, boosted } = params;
 
   const { data, error } = await fetchListings({
     search,
@@ -36,6 +38,7 @@ export async function fetchListedListings(
         : HOTELS_SECTION_CATEGORIES,
     maxPrice,
     limit,
+    boosted,
   });
 
   if (error) {
@@ -64,19 +67,13 @@ export async function fetchListedRooms(
 
 /**
  * Récupère les annonces boostées pour le carrousel sponsorisé.
- * Les annonces à la une apparaissent avant les autres dans le tri.
+ * Le filtre `is_boosted` est appliqué en SQL AVANT la limite, afin que les
+ * annonces boostées les plus récentes ne soient jamais évincées du lot.
  */
-export async function fetchBoostedRooms(): Promise<{
-  data: ListingView[];
-  error: Error | null;
-}> {
-  const { data, error } = await fetchListedListings({ limit: 20 });
-
-  if (error) {
-    return { data: [], error };
-  }
-
-  return { data: data.filter((room) => room.is_boosted), error: null };
+export async function fetchBoostedRooms(
+  categorySlugs?: string[]
+): Promise<{ data: ListingView[]; error: Error | null }> {
+  return fetchListedListings({ limit: 20, boosted: true, categorySlugs });
 }
 
 export function sortRooms(rooms: ListingView[], sort: string): ListingView[] {

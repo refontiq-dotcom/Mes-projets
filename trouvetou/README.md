@@ -51,13 +51,13 @@ polymorphe `listings`.
 ### `/` — Page d'accueil (Hub)
 
 - Hero section : titre, sous-titre et barre de recherche globale.
-- 3 cartes d'univers animées. Un clic sur l'une des cartes ouvre d'abord un
-  **modal « Que recherchez-vous ? »** présentant les 3 univers :
-  - Hôtels & Résidences Meublées → redirige vers `/hotels`
-  - Écoles & Établissements Privés → badge « Bientôt disponible » (clics désactivés)
-  - Cliniques & Santé → badge « Bientôt disponible » (clics désactivés)
+- **3 cartes de modules affichées au premier écran** (2 colonnes sur mobile),
+  une par univers — Hôtels & Résidences, Écoles & Établissements, Cliniques &
+  Santé. Un clic mène directement au portail du module pour comparer les prix.
+- Section « Comment ça marche » (2 colonnes sur mobile) et bande d'appel à
+  l'action.
 
-### `/hotels` — Hôtels & Résidences (section principale active)
+### `/hotels` — Hôtels & Résidences
 
 - Cartes de chambres : image (CDN/Storage), nom, catégorie, prix en FCFA,
   spécificités (`attributes`) en badges/icônes.
@@ -65,6 +65,27 @@ polymorphe `listings`.
   avec les coordonnées du gérant.
 - États de chargement (skeletons), état vide, gestion d'erreur, filtres et tri.
 - Carrousel des annonces sponsorisées et tri « boosté » (annonces en tête).
+- Pagination « Voir plus » (30 résultats par lot, 100 max).
+
+### `/ecoles` — Écoles & Établissements Privés
+
+Même portail générique que `/hotels`, configuré sur la catégorie `school` :
+recherche, budget, tri, prix affiché **par scolarité**, carrousel sponsorisé.
+
+### `/cliniques` — Cliniques & Santé
+
+Même portail générique que `/hotels`, configuré sur la catégorie `clinic` :
+recherche, budget, tri, prix affiché **par consultation**, carrousel sponsorisé.
+
+Les trois portails partagent le composant `CatalogContent`
+(`src/components/catalog/catalog-content.tsx`), paramétré par les configs de
+`src/components/catalog/configs.ts`.
+
+**Détection d'intention** : si une recherche ne correspond pas à l'univers du
+portail courant (ex. « résidence » tapé sur `/ecoles`), le système le détecte
+via des mots-clés (`src/lib/search-intent.ts`, comparaison insensible aux
+accents) et affiche un message guidant l'utilisateur vers le bon portail,
+en conservant sa requête.
 
 ## API d'ingestion — `/api/v1/sync`
 

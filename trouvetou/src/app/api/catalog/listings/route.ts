@@ -40,6 +40,8 @@ function sanitizeRow(row: Record<string, unknown>): Record<string, unknown> {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const MAX_CATALOG_LIMIT = 100;
+
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const admin = getAdminClient();
   if (!admin) {
@@ -59,8 +61,13 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     .split(",")
     .map((slug) => slug.trim())
     .filter((slug) => slug.length > 0);
+  const rawLimit = Number(sp.get("limit") ?? 0);
+  const limit =
+    Number.isFinite(rawLimit) && rawLimit > 0
+      ? Math.min(Math.floor(rawLimit), MAX_CATALOG_LIMIT)
+      : 0;
+  const boosted = sp.get("boosted") === "1";
   const maxPrice = Number(sp.get("maxPrice") ?? 0);
-  const limit = Number(sp.get("limit") ?? 0);
 
   let query = admin.from("listings").select(LISTINGS_SELECT).eq("is_available", true);
 
@@ -75,6 +82,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   if (categorySlugs.length > 0) {
     query = query.in("categories.slug", categorySlugs);
+  }
+
+  if (boosted) {
+    query = query.eq("attributes->>is_boosted", "true");
   }
 
   if (maxPrice > 0) {

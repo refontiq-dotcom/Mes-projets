@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 const NAV_LINKS = [
   { href: "/", label: "Accueil" },
   { href: "/hotels", label: "Hôtels & Résidences" },
+  { href: "/ecoles", label: "Écoles" },
+  { href: "/cliniques", label: "Cliniques" },
 ];
 
 export function Header() {

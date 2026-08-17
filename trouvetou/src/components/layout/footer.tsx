@@ -2,9 +2,9 @@ import Link from "next/link";
 import { Compass } from "lucide-react";
 
 const CATEGORIES = [
-  { href: "/hotels", label: "Hôtels & Résidences meublées", active: true },
-  { href: "#", label: "Écoles & Établissements privés", active: false },
-  { href: "#", label: "Cliniques & Santé", active: false },
+  { href: "/hotels", label: "Hôtels & Résidences meublées" },
+  { href: "/ecoles", label: "Écoles & Établissements privés" },
+  { href: "/cliniques", label: "Cliniques & Santé" },
 ];
 
 export function Footer() {
@@ -35,12 +35,7 @@ export function Footer() {
                 <li key={cat.label}>
                   <Link
                     href={cat.href}
-                    aria-disabled={!cat.active}
-                    className={
-                      cat.active
-                        ? "text-sm text-muted-foreground hover:text-primary transition-colors"
-                        : "text-sm text-muted-foreground/60 cursor-not-allowed"
-                    }
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
                     {cat.label}
                   </Link>
@@ -66,6 +61,22 @@ export function Footer() {
                   className="text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
                   Hôtels & Résidences
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/ecoles"
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Écoles & Établissements
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/cliniques"
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Cliniques & Santé
                 </Link>
               </li>
             </ul>

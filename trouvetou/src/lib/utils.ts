@@ -22,6 +22,9 @@ export function cn(...classes: Array<string | false | null | undefined>): string
   return classes.filter(Boolean).join(" ");
 }
 
+/** Image de secours affichée quand une annonce n'a pas de photo. */
+export const PLACEHOLDER_IMAGE = "/placeholder-hotel.svg";
+
 export function formatFCFA(amount: number): string {
   return (
     new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(amount) +
@@ -35,12 +38,42 @@ export function formatNumber(amount: number): string {
   }).format(amount);
 }
 
-export function normalizePhone(phone: string): string {
+/** Indicatifs téléphoniques des pays couverts (Afrique de l'Ouest). */
+const COUNTRY_DIAL_CODES: Record<string, string> = {
+  BF: "226",
+  BJ: "229",
+  CI: "225",
+  CV: "238",
+  GH: "233",
+  GM: "220",
+  GN: "224",
+  GW: "245",
+  LR: "231",
+  ML: "223",
+  MR: "222",
+  NE: "227",
+  NG: "234",
+  SL: "232",
+  SN: "221",
+  TD: "235",
+  TG: "228",
+};
+
+/**
+ * Normalise un numéro de téléphone pour un lien tel:/wa.me.
+ * Le préfixe international est déduit du pays (attrs.country), avec la
+ * Côte d'Ivoire (+225) comme défaut historique.
+ */
+export function normalizePhone(phone: string, country?: string | null): string {
   const cleaned = phone.replace(/[\s\-().]/g, "");
   if (cleaned.startsWith("+")) return cleaned;
   if (cleaned.startsWith("00")) return "+" + cleaned.slice(2);
-  if (cleaned.startsWith("0")) return "+225" + cleaned.slice(1);
-  return "+225" + cleaned;
+
+  const dialCode =
+    COUNTRY_DIAL_CODES[(country ?? "").trim().toUpperCase()] ?? "225";
+
+  if (cleaned.startsWith("0")) return `+${dialCode}${cleaned.slice(1)}`;
+  return `+${dialCode}${cleaned}`;
 }
 
 export function buildGoogleMapsUrl(
@@ -59,8 +92,12 @@ export function buildGoogleMapsUrl(
   return "https://www.google.com/maps";
 }
 
-export function buildWhatsAppUrl(phone: string, message?: string): string {
-  const base = `https://wa.me/${normalizePhone(phone).replace(/^\+/, "")}`;
+export function buildWhatsAppUrl(
+  phone: string,
+  message?: string,
+  country?: string | null
+): string {
+  const base = `https://wa.me/${normalizePhone(phone, country).replace(/^\+/, "")}`;
   return message ? `${base}?text=${encodeURIComponent(message)}` : base;
 }
 

@@ -23,24 +23,24 @@ export function Hero() {
       <div className="hero-blob h-96 w-96 bg-teal-200 top-20 right-0" />
       <div className="hero-blob h-64 w-64 bg-amber-200 bottom-0 left-1/3" />
 
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 sm:py-28 text-center">
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 sm:py-28 text-center">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-sm font-medium text-emerald-700">
-            <MapPin className="h-4 w-4" />
+          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 sm:px-4 sm:py-1.5 text-xs sm:text-sm font-medium text-emerald-700">
+            <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             Annonces vérifiées · Côte d&apos;Ivoire & Afrique de l&apos;Ouest
           </span>
 
-          <h1 className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground">
+          <h1 className="mt-4 sm:mt-6 text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground">
             Trouvez{" "}
             <span className="text-primary">tout</span>,{" "}
             <span className="text-primary">restez</span> serein.
           </h1>
 
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
+          <p className="mx-auto mt-4 sm:mt-6 max-w-2xl text-base sm:text-lg text-muted-foreground">
             Hôtels, résidences meublées, écoles et cliniques de confiance
             partout en Afrique de l&apos;Ouest. Comparez, contactez et réservez en
             quelques clics.
@@ -52,7 +52,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.15 }}
-          className="mx-auto mt-10 flex max-w-2xl flex-col sm:flex-row items-stretch gap-3 rounded-2xl border border-border bg-card p-3 shadow-lg shadow-emerald-100/50"
+          className="mx-auto mt-6 sm:mt-10 flex max-w-2xl flex-col sm:flex-row items-stretch gap-3 rounded-2xl border border-border bg-card p-3 shadow-lg shadow-emerald-100/50"
         >
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />

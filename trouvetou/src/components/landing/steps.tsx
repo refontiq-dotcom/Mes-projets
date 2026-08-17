@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { CircleCheck, HandCoins, MapPin, Search } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const STEPS = [
   {
@@ -44,7 +45,7 @@ export function HowItWorks() {
           </h2>
         </motion.div>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
+        <div className="mt-12 grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3">
           {STEPS.map((step, i) => {
             const Icon = step.icon;
             return (
@@ -54,7 +55,10 @@ export function HowItWorks() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-80px" }}
                 transition={{ duration: 0.45, delay: i * 0.12 }}
-                className="rounded-2xl border border-border bg-background p-8"
+                className={cn(
+                  "rounded-2xl border border-border bg-background p-5 sm:p-8",
+                  i === 2 && "col-span-2 md:col-span-1"
+                )}
               >
                 <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
                   <Icon className="h-6 w-6" />
