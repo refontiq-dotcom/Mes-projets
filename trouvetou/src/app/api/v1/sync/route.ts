@@ -198,6 +198,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const inserted = Number(data?.[0]?.inserted ?? 0);
   const updated = Number(data?.[0]?.updated ?? 0);
 
+  // 5. Soft-removal : toute annonce du provider absente du lot courant devient
+  // indisponible (elle disparaît du catalogue public sans être supprimée,
+  // l'historique reste consultable).
+  const externalIds = cleanItems.map((item) => item.external_id);
+  await admin
+    .from("listings")
+    .update({ is_available: false })
+    .eq("provider_id", provider.id)
+    .not("external_id", "in", `(${externalIds.join(",")})`);
+
   await admin.from("sync_logs").insert({
     provider_id: provider.id,
     status: "success",
