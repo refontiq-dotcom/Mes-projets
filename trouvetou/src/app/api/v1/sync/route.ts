@@ -207,7 +207,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       .from("listings")
       .update({ is_available: false })
       .eq("provider_id", provider.id)
-      .not("external_id", "in", `(${externalIds.map((id) => `"${id}"`).join(",")})`);
+      .filter("external_id", "not.in", `(${externalIds.join(",")})`);
   }
 
   await admin.from("sync_logs").insert({
