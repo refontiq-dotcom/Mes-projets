@@ -202,11 +202,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // indisponible (elle disparaît du catalogue public sans être supprimée,
   // l'historique reste consultable).
   const externalIds = cleanItems.map((item) => item.external_id);
-  await admin
-    .from("listings")
-    .update({ is_available: false })
-    .eq("provider_id", provider.id)
-    .not("external_id", "in", `(${externalIds.join(",")})`);
+  if (externalIds.length > 0) {
+    await admin
+      .from("listings")
+      .update({ is_available: false })
+      .eq("provider_id", provider.id)
+      .not("external_id", "in", `(${externalIds.map((id) => `"${id}"`).join(",")})`);
+  }
 
   await admin.from("sync_logs").insert({
     provider_id: provider.id,
