@@ -131,6 +131,8 @@ export function BookingModal({
       });
       if (body.available === true) {
         setStep("guest");
+      } else {
+        setCheckError("Aucune chambre n'est disponible pour ces dates. Veuillez sélectionner d'autres dates.");
       }
     } catch {
       setCheckError("Erreur réseau. Veuillez réessayer.");
