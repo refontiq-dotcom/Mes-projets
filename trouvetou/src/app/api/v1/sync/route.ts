@@ -31,6 +31,7 @@ interface SyncItem {
   images?: string[] | null;
   attributes?: Record<string, unknown> | null;
   is_available?: boolean | null;
+  category_slug?: string | null;
 }
 
 interface SyncPayload {
@@ -167,6 +168,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       images,
       attributes,
       is_available: item.is_available ?? true,
+      category_slug: typeof item.category_slug === "string" ? item.category_slug.trim() : null,
     };
   });
 

@@ -266,37 +266,53 @@ BEGIN
   END IF;
 
   FOR v_item IN SELECT * FROM jsonb_array_elements(p_items) LOOP
-    INSERT INTO listings (
-      provider_id, category_id, external_id, title, description,
-      city, base_price, images, attributes, is_available
-    ) VALUES (
-      p_provider_id,
-      p_category_id,
-      v_item ->> 'external_id',
-      v_item ->> 'title',
-      v_item ->> 'description',
-      v_item ->> 'city',
-      (v_item ->> 'base_price')::NUMERIC,
-      COALESCE(v_item -> 'images', '[]'::jsonb),
-      COALESCE(v_item -> 'attributes', '{}'::jsonb),
-      COALESCE((v_item ->> 'is_available')::BOOLEAN, TRUE)
-    )
-    ON CONFLICT (provider_id, external_id) DO UPDATE SET
-      category_id  = EXCLUDED.category_id,
-      title        = EXCLUDED.title,
-      description  = EXCLUDED.description,
-      city         = EXCLUDED.city,
-      base_price   = EXCLUDED.base_price,
-      images       = EXCLUDED.images,
-      attributes   = EXCLUDED.attributes,
-      is_available = EXCLUDED.is_available
-    RETURNING (xmax = 0) INTO v_is_insert;
+    -- Résolution de la catégorie par item
+    DECLARE
+      v_item_category_id UUID;
+      v_slug TEXT;
+    BEGIN
+      v_slug := v_item ->> 'category_slug';
+      IF v_slug IS NOT NULL THEN
+        SELECT id INTO v_item_category_id FROM categories WHERE slug = v_slug;
+        IF NOT FOUND THEN
+          v_item_category_id := p_category_id;
+        END IF;
+      ELSE
+        v_item_category_id := p_category_id;
+      END IF;
 
-    IF v_is_insert THEN
-      v_inserted := v_inserted + 1;
-    ELSE
-      v_updated := v_updated + 1;
-    END IF;
+      INSERT INTO listings (
+        provider_id, category_id, external_id, title, description,
+        city, base_price, images, attributes, is_available
+      ) VALUES (
+        p_provider_id,
+        v_item_category_id,
+        v_item ->> 'external_id',
+        v_item ->> 'title',
+        v_item ->> 'description',
+        v_item ->> 'city',
+        (v_item ->> 'base_price')::NUMERIC,
+        COALESCE(v_item -> 'images', '[]'::jsonb),
+        COALESCE(v_item -> 'attributes', '{}'::jsonb),
+        COALESCE((v_item ->> 'is_available')::BOOLEAN, TRUE)
+      )
+      ON CONFLICT (provider_id, external_id) DO UPDATE SET
+        category_id  = EXCLUDED.category_id,
+        title        = EXCLUDED.title,
+        description  = EXCLUDED.description,
+        city         = EXCLUDED.city,
+        base_price   = EXCLUDED.base_price,
+        images       = EXCLUDED.images,
+        attributes   = EXCLUDED.attributes,
+        is_available = EXCLUDED.is_available
+      RETURNING (xmax = 0) INTO v_is_insert;
+
+      IF v_is_insert THEN
+        v_inserted := v_inserted + 1;
+      ELSE
+        v_updated := v_updated + 1;
+      END IF;
+    END;
   END LOOP;
 
   RETURN QUERY SELECT v_inserted, v_updated;
