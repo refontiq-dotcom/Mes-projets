@@ -308,7 +308,7 @@ export function BookingModal({
               <span className="text-sm font-medium text-foreground">Téléphone</span>
               <Input
                 type="tel"
-                placeholder="+221 77 000 00 00"
+                placeholder="+225 07 00 00 00 00"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
               />

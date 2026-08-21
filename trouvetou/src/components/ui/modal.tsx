@@ -47,16 +47,28 @@ export function Modal({
     };
   }, [open]);
 
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  // Focus initial à l'ouverture
+  useEffect(() => {
+    if (!open) return;
+    const frame = requestAnimationFrame(() => dialogRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
+
+  // Événements clavier (Tab et Escape)
   useEffect(() => {
     if (!open) return;
 
     const previouslyFocused = document.activeElement as HTMLElement | null;
-    const frame = requestAnimationFrame(() => dialogRef.current?.focus());
 
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         e.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -89,13 +101,12 @@ export function Modal({
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      cancelAnimationFrame(frame);
       window.removeEventListener("keydown", handleKeyDown);
       if (previouslyFocused?.isConnected) {
         previouslyFocused.focus();
       }
     };
-  }, [open, onClose]);
+  }, [open]);
 
   return (
     <AnimatePresence>
